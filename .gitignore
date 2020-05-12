@@ -15,7 +15,7 @@ core
 *.cgo*.go
 *.cgo*.c
 _cgo_*
-*.dump
+
 _obj
 _test
 _testmain.go
