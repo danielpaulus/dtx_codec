@@ -40,7 +40,7 @@ func main() {
 		f.Write([]byte(msg.StringDebug()))
 		f.Write([]byte("\n"))
 
-		if msg.PayloadHeader.HasPayload() {
+		if msg.HasPayload() {
 			payloadDumpFile.Write([]byte(fmt.Sprintf("\"%x\",", msg.GetPayloadBytes())))
 		}
 

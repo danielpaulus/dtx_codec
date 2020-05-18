@@ -1,6 +1,7 @@
 package dtx
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ type DtxMessage struct {
 	ChannelCode       int
 	ExpectsReply      bool
 	PayloadHeader     DtxPayloadHeader
+	AuxiliaryHeader   AuxiliaryHeader
 	rawBytes          []byte
 }
 
@@ -26,6 +28,20 @@ type DtxPayloadHeader struct {
 	AuxiliaryLength    int
 	TotalPayloadLength int
 	Flags              int
+}
+
+//This header can actually be completely ignored. We do not need to care about the buffer size
+//And we already know the AuxiliarySize. The other two ints seem to be always 0 anyway. Could
+//also be that Buffer and Aux Size are Uint64
+type AuxiliaryHeader struct {
+	BufferSize    uint32
+	Unknown       uint32
+	AuxiliarySize uint32
+	Unknown2      uint32
+}
+
+func (a AuxiliaryHeader) String() string {
+	return fmt.Sprintf("BufSiz:%d Unknown:%d AuxSiz:%d Unknown2:%d", a.BufferSize, a.Unknown, a.AuxiliarySize, a.Unknown2)
 }
 
 func (d DtxMessage) String() string {
@@ -39,26 +55,26 @@ func (d DtxMessage) String() string {
 	}
 
 	return fmt.Sprintf("i%d.%d%s c%d t:%s mlen:%d aux_len%d paylen%d", d.Identifier, d.ConversationIndex, e, d.ChannelCode, msgtype,
-		d.MessageLength, d.PayloadHeader.AuxiliaryLength, d.PayloadHeader.PayloadLength())
+		d.MessageLength, d.PayloadHeader.AuxiliaryLength, d.PayloadLength())
 }
 
 func (d DtxMessage) StringDebug() string {
-	auxHeaderBytes := make([]byte, 0)
+
 	aux_bytes := make([]byte, 0)
-	if d.PayloadHeader.HasAuxiliary() {
-		auxHeaderBytes = d.rawBytes[48:64]
+	if d.HasAuxiliary() {
+
 		aux_bytes = d.rawBytes[64 : 48+d.PayloadHeader.AuxiliaryLength]
 		payloadBytes := make([]byte, 0)
 		var b []byte
-		if d.PayloadHeader.HasPayload() {
+		if d.HasPayload() {
 			payloadBytes = d.rawBytes[48+d.PayloadHeader.AuxiliaryLength:]
 			payloadValue, _ := nskeyedarchiver.Unarchive(payloadBytes)
 			b, _ = json.Marshal(payloadValue[0])
 
 		}
-		return fmt.Sprintf("auxheader:%x\naux:%x\npayload: %s \nrawbytes:%x", auxHeaderBytes, aux_bytes, b, d.rawBytes)
+		return fmt.Sprintf("auxheader:%s\naux:%x\npayload: %s \nrawbytes:%x", d.AuxiliaryHeader, aux_bytes, b, d.rawBytes)
 	}
-	if d.PayloadHeader.HasPayload() {
+	if d.HasPayload() {
 		payloadBytes := d.rawBytes[48:]
 		payloadValue, _ := nskeyedarchiver.Unarchive(payloadBytes)
 		b, _ := json.Marshal(payloadValue[0])
@@ -68,34 +84,30 @@ func (d DtxMessage) StringDebug() string {
 }
 func (d DtxMessage) GetPayloadBytes() []byte {
 
-	if d.PayloadHeader.HasAuxiliary() {
+	if d.HasAuxiliary() {
 		payloadBytes := make([]byte, 0)
-		if d.PayloadHeader.HasPayload() {
+		if d.HasPayload() {
 			payloadBytes = d.rawBytes[48+d.PayloadHeader.AuxiliaryLength:]
-			//			a, _ := archiver.Unarchive(payloadBytes)
-			//			log.Fatal(a)
 			return payloadBytes
 		}
 
 	}
-	if d.PayloadHeader.HasPayload() {
+	if d.HasPayload() {
 		payloadBytes := d.rawBytes[48:]
-		//a, _ := archiver.Unarchive(payloadBytes)
-		//log.Fatal(a)
 		return payloadBytes
 	}
 	return nil
 }
 
-func (d DtxPayloadHeader) PayloadLength() int {
-	return d.TotalPayloadLength - d.AuxiliaryLength
+func (d DtxMessage) PayloadLength() int {
+	return d.PayloadHeader.TotalPayloadLength - d.PayloadHeader.AuxiliaryLength
 }
 
-func (d DtxPayloadHeader) HasAuxiliary() bool {
-	return d.AuxiliaryLength > 0
+func (d DtxMessage) HasAuxiliary() bool {
+	return d.PayloadHeader.AuxiliaryLength > 0
 }
 
-func (d DtxPayloadHeader) HasPayload() bool {
+func (d DtxMessage) HasPayload() bool {
 	return d.PayloadLength() > 0
 }
 
@@ -139,10 +151,29 @@ func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 		return DtxMessage{}, make([]byte, 0), err
 	}
 	result.PayloadHeader = ph
+
+	if result.HasAuxiliary() {
+		header, err := parseAuxiliaryHeader(messageBytes[48:64])
+		if err != nil {
+			return DtxMessage{}, make([]byte, 0), err
+		}
+		result.AuxiliaryHeader = header
+	}
+
 	totalMessageLength := result.MessageLength + int(DtxHeaderLength)
 	result.rawBytes = messageBytes[:totalMessageLength]
 	remainingBytes := messageBytes[totalMessageLength:]
 	return result, remainingBytes, nil
+}
+
+func parseAuxiliaryHeader(headerBytes []byte) (AuxiliaryHeader, error) {
+	r := bytes.NewReader(headerBytes)
+	var result AuxiliaryHeader
+	err := binary.Read(r, binary.LittleEndian, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 func parsePayloadHeader(messageBytes []byte) (DtxPayloadHeader, error) {
