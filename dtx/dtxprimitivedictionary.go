@@ -3,8 +3,11 @@ package dtx
 import (
 	"container/list"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
+
+	archiver "github.com/danielpaulus/nskeyedarchiver"
 )
 
 // That is by far the weirdest concept I have ever seen.
@@ -28,6 +31,21 @@ type DtxPrimitiveKeyValuePair struct {
 func (d DtxPrimitiveDictionary) String() string {
 	result := "["
 	for i, v := range d.valueTypes {
+		var prettyString []byte
+		if v == bytearray {
+			bytes := d.values[i].([]byte)
+			prettyString = bytes
+			msg, err := archiver.Unarchive(bytes)
+			if err == nil {
+				prettyString, _ = json.Marshal(msg)
+			}
+			result += fmt.Sprintf("{t:%s, v:%s},\n", toString(v), prettyString)
+			continue
+		}
+		if v == t_uint32 {
+			result += fmt.Sprintf("{t:%s, v:%d},\n", toString(v), d.values[i])
+			continue
+		}
 		result += fmt.Sprintf("{t:%s, v:%s},\n", toString(v), d.values[i])
 	}
 	result += "]"

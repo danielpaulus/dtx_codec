@@ -18,9 +18,11 @@ type DtxMessage struct {
 	ChannelCode       int
 	ExpectsReply      bool
 	PayloadHeader     DtxPayloadHeader
+	Payload           []interface{}
 	AuxiliaryHeader   AuxiliaryHeader
 	Auxiliary         DtxPrimitiveDictionary
 	rawBytes          []byte
+	fragmentBytes     []byte
 }
 
 //16 Bytes
@@ -60,42 +62,29 @@ func (d DtxMessage) String() string {
 }
 
 func (d DtxMessage) StringDebug() string {
-
-	if d.HasAuxiliary() {
-
-		payloadBytes := make([]byte, 0)
-		var b []byte
-		if d.HasPayload() {
-			payloadBytes = d.rawBytes[48+d.PayloadHeader.AuxiliaryLength:]
-			payloadValue, _ := nskeyedarchiver.Unarchive(payloadBytes)
-			b, _ = json.Marshal(payloadValue[0])
-
-		}
-		return fmt.Sprintf("auxheader:%s\naux:%s\npayload: %s \nrawbytes:%x", d.AuxiliaryHeader, d.Auxiliary, b, d.rawBytes)
+	if Ack == d.PayloadHeader.MessageType {
+		return d.String()
 	}
+	payload := "none"
 	if d.HasPayload() {
-		payloadBytes := d.rawBytes[48:]
-		payloadValue, _ := nskeyedarchiver.Unarchive(payloadBytes)
-		b, _ := json.Marshal(payloadValue[0])
-		return fmt.Sprintf("no aux,payload: %s \nrawbytes:%x", b, d.rawBytes)
+		b, _ := json.Marshal(d.Payload[0])
+		payload = string(b)
 	}
-	return fmt.Sprintf("\nrawbytes:%x", d.rawBytes)
+	if d.HasAuxiliary() {
+		return fmt.Sprintf("auxheader:%s\naux:%s\npayload: %s \nrawbytes:%x", d.AuxiliaryHeader, d.Auxiliary, payload, d.rawBytes)
+	}
+	return fmt.Sprintf("no aux,payload: %s \nrawbytes:%x", payload, d.rawBytes)
 }
-func (d DtxMessage) GetPayloadBytes() []byte {
-
-	if d.HasAuxiliary() {
-		payloadBytes := make([]byte, 0)
-		if d.HasPayload() {
-			payloadBytes = d.rawBytes[48+d.PayloadHeader.AuxiliaryLength:]
-			return payloadBytes
-		}
-
+func (d DtxMessage) parsePayloadBytes(messageBytes []byte) ([]interface{}, error) {
+	offset := 0
+	if d.HasAuxiliary() && d.HasPayload() {
+		offset = 48 + d.PayloadHeader.AuxiliaryLength
 	}
-	if d.HasPayload() {
-		payloadBytes := d.rawBytes[48:]
-		return payloadBytes
+	if !d.HasAuxiliary() && d.HasPayload() {
+		offset = 48
 	}
-	return nil
+
+	return nskeyedarchiver.Unarchive(messageBytes[offset:])
 }
 
 func (d DtxMessage) PayloadLength() int {
@@ -137,6 +126,10 @@ func (d DtxMessage) IsLastFragment() bool {
 	return d.Fragments-d.FragmentIndex == 1
 }
 
+func (d DtxMessage) IsFragment() bool {
+	return d.Fragments > 1
+}
+
 //Indicates whether the message you call this on, is the first part of a fragmented message, and if otherMessage is a subsequent fragment
 func (d DtxMessage) MessageIsFirstFragmentFor(otherMessage DtxMessage) bool {
 	if !d.IsFirstFragment() {
@@ -166,6 +159,10 @@ func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 	if result.IsFirstFragment() {
 		return result, messageBytes[32:], nil
 	}
+	if result.IsFragment() {
+		result.fragmentBytes = messageBytes[32 : result.MessageLength+32]
+		return result, messageBytes[result.MessageLength+32:], nil
+	}
 	ph, err := parsePayloadHeader(messageBytes[32:48])
 	if err != nil {
 		return DtxMessage{}, make([]byte, 0), err
@@ -184,6 +181,14 @@ func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 
 	totalMessageLength := result.MessageLength + int(DtxHeaderLength)
 	result.rawBytes = messageBytes[:totalMessageLength]
+	if result.HasPayload() {
+		payload, err := result.parsePayloadBytes(result.rawBytes)
+		if err != nil {
+			return DtxMessage{}, make([]byte, 0), err
+		}
+		result.Payload = payload
+	}
+
 	remainingBytes := messageBytes[totalMessageLength:]
 	return result, remainingBytes, nil
 }

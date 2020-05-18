@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,11 +37,7 @@ func main() {
 		f.Write([]byte(msg.String()))
 		f.Write([]byte("\n"))
 		f.Write([]byte(msg.StringDebug()))
-		f.Write([]byte("\n"))
-
-		if msg.HasPayload() {
-			payloadDumpFile.Write([]byte(fmt.Sprintf("\"%x\",", msg.GetPayloadBytes())))
-		}
+		f.Write([]byte("\n\n"))
 
 	}
 	payloadDumpFile.Write([]byte("]"))
