@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	dat, err := ioutil.ReadFile("dtx/fixtures/conn-out6.dump")
+	dat, err := ioutil.ReadFile("dtx/fixtures/conn-in6.dump")
 	if err != nil {
 		log.Fatal(err)
 	}

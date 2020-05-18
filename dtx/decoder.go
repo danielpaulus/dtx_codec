@@ -19,6 +19,7 @@ type DtxMessage struct {
 	ExpectsReply      bool
 	PayloadHeader     DtxPayloadHeader
 	AuxiliaryHeader   AuxiliaryHeader
+	Auxiliary         DtxPrimitiveDictionary
 	rawBytes          []byte
 }
 
@@ -60,10 +61,8 @@ func (d DtxMessage) String() string {
 
 func (d DtxMessage) StringDebug() string {
 
-	aux_bytes := make([]byte, 0)
 	if d.HasAuxiliary() {
 
-		aux_bytes = d.rawBytes[64 : 48+d.PayloadHeader.AuxiliaryLength]
 		payloadBytes := make([]byte, 0)
 		var b []byte
 		if d.HasPayload() {
@@ -72,7 +71,7 @@ func (d DtxMessage) StringDebug() string {
 			b, _ = json.Marshal(payloadValue[0])
 
 		}
-		return fmt.Sprintf("auxheader:%s\naux:%x\npayload: %s \nrawbytes:%x", d.AuxiliaryHeader, aux_bytes, b, d.rawBytes)
+		return fmt.Sprintf("auxheader:%s\naux:%s\npayload: %s \nrawbytes:%x", d.AuxiliaryHeader, d.Auxiliary, b, d.rawBytes)
 	}
 	if d.HasPayload() {
 		payloadBytes := d.rawBytes[48:]
@@ -158,6 +157,8 @@ func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 			return DtxMessage{}, make([]byte, 0), err
 		}
 		result.AuxiliaryHeader = header
+		auxBytes := messageBytes[64 : 48+result.PayloadHeader.AuxiliaryLength]
+		result.Auxiliary = decodeAuxiliary(auxBytes)
 	}
 
 	totalMessageLength := result.MessageLength + int(DtxHeaderLength)
