@@ -2,7 +2,10 @@ package dtx
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+
+	"github.com/danielpaulus/nskeyedarchiver"
 )
 
 type DtxMessage struct {
@@ -46,16 +49,42 @@ func (d DtxMessage) StringDebug() string {
 		auxHeaderBytes = d.rawBytes[48:64]
 		aux_bytes = d.rawBytes[64 : 48+d.PayloadHeader.AuxiliaryLength]
 		payloadBytes := make([]byte, 0)
+		var b []byte
 		if d.PayloadHeader.HasPayload() {
 			payloadBytes = d.rawBytes[48+d.PayloadHeader.AuxiliaryLength:]
+			payloadValue, _ := nskeyedarchiver.Unarchive(payloadBytes)
+			b, _ = json.Marshal(payloadValue[0])
+
 		}
-		return fmt.Sprintf("auxheader:%x\naux:%x\npayload:%x\nrawbytes:%x", auxHeaderBytes, aux_bytes, payloadBytes, d.rawBytes)
+		return fmt.Sprintf("auxheader:%x\naux:%x\npayload: %s \nrawbytes:%x", auxHeaderBytes, aux_bytes, b, d.rawBytes)
 	}
 	if d.PayloadHeader.HasPayload() {
 		payloadBytes := d.rawBytes[48:]
-		return fmt.Sprintf("no aux,payload:%x\nrawbytes:%x", payloadBytes, d.rawBytes)
+		payloadValue, _ := nskeyedarchiver.Unarchive(payloadBytes)
+		b, _ := json.Marshal(payloadValue[0])
+		return fmt.Sprintf("no aux,payload: %s \nrawbytes:%x", b, d.rawBytes)
 	}
 	return fmt.Sprintf("\nrawbytes:%x", d.rawBytes)
+}
+func (d DtxMessage) GetPayloadBytes() []byte {
+
+	if d.PayloadHeader.HasAuxiliary() {
+		payloadBytes := make([]byte, 0)
+		if d.PayloadHeader.HasPayload() {
+			payloadBytes = d.rawBytes[48+d.PayloadHeader.AuxiliaryLength:]
+			//			a, _ := archiver.Unarchive(payloadBytes)
+			//			log.Fatal(a)
+			return payloadBytes
+		}
+
+	}
+	if d.PayloadHeader.HasPayload() {
+		payloadBytes := d.rawBytes[48:]
+		//a, _ := archiver.Unarchive(payloadBytes)
+		//log.Fatal(a)
+		return payloadBytes
+	}
+	return nil
 }
 
 func (d DtxPayloadHeader) PayloadLength() int {

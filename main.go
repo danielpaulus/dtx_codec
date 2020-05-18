@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,7 +20,14 @@ func main() {
 	}
 	defer f.Close()
 
+	payloadDumpFile, err2 := os.Create("payload_dump.json")
+	if err2 != nil {
+		log.Fatal("couldnt create file")
+	}
+	defer payloadDumpFile.Close()
+
 	remaining := 1
+	payloadDumpFile.Write([]byte("["))
 	for remaining != 0 {
 		msg, remainingBytes, err := dtx.Decode(dat)
 		if err != nil {
@@ -32,5 +40,10 @@ func main() {
 		f.Write([]byte(msg.StringDebug()))
 		f.Write([]byte("\n"))
 
+		if msg.PayloadHeader.HasPayload() {
+			payloadDumpFile.Write([]byte(fmt.Sprintf("\"%x\",", msg.GetPayloadBytes())))
+		}
+
 	}
+	payloadDumpFile.Write([]byte("]"))
 }

@@ -1,3 +1,5 @@
+payload_dump.*
+.vscode
 *.dump
 dump.txt
 .DS_Store
