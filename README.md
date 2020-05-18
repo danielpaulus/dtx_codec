@@ -6,6 +6,16 @@ Use https://github.com/danielpaulus/ios_simulator_dtx_dump to get a dump of DTX 
 
 Done:
 - Basic Decoder, fully decoding DTX messages and dump them
+Example:
+```
+i1038.0e c1 t:rpc_asking_reply mlen:25357 aux_len25162 paylen179
+auxheader:BufSiz:25584 Unknown:0 AuxSiz:25146 Unknown2:0
+aux:[{t:binary, v:["blaUITests.blaUITests"]},
+{t:binary, v:["blaUITests.blaUITests"]},
+{t:binary, v:["blaUITests.blaUITests"]},
+]
+payload: "_XCT_testCase:method:didFinishActivity:" 
+```
  
  Todo:
 - Basic Encoder, re-encode DTX so you can control stuff
