@@ -4,5 +4,10 @@ A golang based Apple DTX implementation. So you can run on real iOS devices: XCU
 Will be added to go-ios eventually.
 Use https://github.com/danielpaulus/ios_simulator_dtx_dump to get a dump of DTX messages to test the decoder with.
 
-It is basically done, I just need to add NSKeyedArchiver/NSKeyedUnarchiver support, which is a tedious bunch of coding :-) 
+Done:
+- Basic Decoder, fully decoding DTX messages and dump them
+ Todo:
+- Basic Encoder, re-encode DTX so you can control stuff
+- Fix a few unknown things for real devices (I am using Simulator output to develop before switching to devices)
+- Integrate into go-ios
 Check it out here: https://github.com/danielpaulus/nskeyedarchiver
