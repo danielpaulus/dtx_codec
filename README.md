@@ -11,4 +11,5 @@ Done:
 - Basic Encoder, re-encode DTX so you can control stuff
 - Fix a few unknown things for real devices (I am using Simulator output to develop before switching to devices)
 - Integrate into go-ios
-Check it out here: https://github.com/danielpaulus/nskeyedarchiver
+
+Check out my nskeyedarchiver implementation here: https://github.com/danielpaulus/nskeyedarchiver
