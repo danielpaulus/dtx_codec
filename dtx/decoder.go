@@ -128,6 +128,23 @@ const (
 	DtxReservedBits uint32 = 0x0
 )
 
+//This message is only 32 bytes long
+func (d DtxMessage) IsFirstFragment() bool {
+	return d.Fragments > 1 && d.FragmentIndex == 0
+}
+
+func (d DtxMessage) IsLastFragment() bool {
+	return d.Fragments-d.FragmentIndex == 1
+}
+
+//Indicates whether the message you call this on, is the first part of a fragmented message, and if otherMessage is a subsequent fragment
+func (d DtxMessage) MessageIsFirstFragmentFor(otherMessage DtxMessage) bool {
+	if !d.IsFirstFragment() {
+		panic("Illegal state")
+	}
+	return d.Identifier == otherMessage.Identifier && d.Fragments == otherMessage.Fragments && otherMessage.FragmentIndex > 0
+}
+
 func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 
 	if binary.BigEndian.Uint32(messageBytes) != DtxMessageMagic {
@@ -145,6 +162,10 @@ func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 	result.ChannelCode = int(binary.LittleEndian.Uint32(messageBytes[24:]))
 
 	result.ExpectsReply = binary.LittleEndian.Uint32(messageBytes[28:]) == uint32(1)
+
+	if result.IsFirstFragment() {
+		return result, messageBytes[32:], nil
+	}
 	ph, err := parsePayloadHeader(messageBytes[32:48])
 	if err != nil {
 		return DtxMessage{}, make([]byte, 0), err
