@@ -6,7 +6,8 @@ Use https://github.com/danielpaulus/ios_simulator_dtx_dump to get a dump of DTX 
 
 Done:
 - Basic Decoder, fully decoding DTX messages and dump them
-Example:
+
+Check out this example method call, which the device sends to us to tell us about the `blaUITests.blaUITests` testcase finishing:
 ```
 i1038.0e c1 t:rpc_asking_reply mlen:25357 aux_len25162 paylen179
 auxheader:BufSiz:25584 Unknown:0 AuxSiz:25146 Unknown2:0
