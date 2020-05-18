@@ -6,6 +6,7 @@ Use https://github.com/danielpaulus/ios_simulator_dtx_dump to get a dump of DTX 
 
 Done:
 - Basic Decoder, fully decoding DTX messages and dump them
+ 
  Todo:
 - Basic Encoder, re-encode DTX so you can control stuff
 - Fix a few unknown things for real devices (I am using Simulator output to develop before switching to devices)
