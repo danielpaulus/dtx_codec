@@ -157,9 +157,11 @@ func Decode(messageBytes []byte) (DtxMessage, []byte, error) {
 	result.ExpectsReply = binary.LittleEndian.Uint32(messageBytes[28:]) == uint32(1)
 
 	if result.IsFirstFragment() {
+		result.fragmentBytes = messageBytes[:32]
 		return result, messageBytes[32:], nil
 	}
 	if result.IsFragment() {
+		//32 offset is correct, the binary starts with a payload header
 		result.fragmentBytes = messageBytes[32 : result.MessageLength+32]
 		return result, messageBytes[result.MessageLength+32:], nil
 	}
