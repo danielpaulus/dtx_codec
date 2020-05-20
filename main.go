@@ -41,7 +41,7 @@ func main() {
 				if err1 != nil {
 					panic(err1)
 				}
-				print(msg1.StringDebug())
+
 				f.Write([]byte(msg1.String()))
 				f.Write([]byte("\n"))
 				f.Write([]byte(msg1.StringDebug()))
