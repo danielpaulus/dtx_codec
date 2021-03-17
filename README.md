@@ -1,3 +1,6 @@
+# Deprecated in favor of https://github.com/danielpaulus/go-ios which has a fully working DTX implementation now
+
+
 # dtx_codec
 A golang based Apple DTX implementation. So you can run on real iOS devices: XCUITests, get CPU metrics, launch and kill apps from any OS without the need for expensive Apple hardware :-)
 
